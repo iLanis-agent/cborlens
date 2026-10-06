@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CborLens - is your CBOR canonical enough to sign?</title>
+<meta name="description" content="Free browser CBOR inspector: full RFC 8949 decode, canonicality analysis, duplicate-key detection, tag and float support. The file never leaves your machine.">
+<style>
+:root{--bg:#0b0e14;--panel:#121722;--line:#232c3d;--fg:#dbe4f0;--dim:#7d8ba1;--acc:#c084fc}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:880px;margin:0 auto;padding:0 22px}
+header.hero{padding:70px 0 40px;text-align:center}
+h1{font-size:44px;margin:0 0 10px}
+h1 span{color:var(--acc)}
+.tag{font-size:18px;color:var(--dim);max-width:640px;margin:0 auto 26px}
+a.btn{display:inline-block;background:var(--acc);color:#26123a;font-weight:700;padding:13px 30px;border-radius:10px;text-decoration:none;font-size:16px}
+a.btn:hover{filter:brightness(1.1)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:36px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card h3{margin:0 0 6px;font-size:16px}
+.card p{margin:0;color:var(--dim);font-size:14px}
+.sec{padding:26px 0}
+.sec h2{font-size:24px;margin:0 0 10px}
+.sec p{color:var(--dim);margin:0 0 10px}
+ul{color:var(--dim);padding-left:20px}
+li{margin:4px 0}
+code{background:#0e131d;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px}
+footer{border-top:1px solid var(--line);margin-top:30px;padding:20px 0;color:var(--dim);font-size:13px;text-align:center}
+footer a{color:var(--acc);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <h1>Cbor<span>Lens</span></h1>
+  <p class="tag">CBOR is everywhere in security tokens, COSE signatures and IoT payloads - and the same data can encode a dozen ways. See exactly what's in the blob, and whether it's canonical enough to hash.</p>
+  <a class="btn" href="app.html">Open CborLens</a>
+</header>
+<div class="grid">
+  <div class="card"><h3>Canonicality verdict</h3><p>Non-shortest integers, indefinite lengths, unsorted map keys - the three things that break deterministic encoding, flagged item by item.</p></div>
+  <div class="card"><h3>Full RFC 8949</h3><p>Every major type: 64-bit ints (BigInt-exact), byte and text strings, arrays, maps, tags, and half/single/double floats.</p></div>
+  <div class="card"><h3>Duplicate keys caught</h3><p>Maps with the same key twice are invalid CBOR but decode silently in most tools. Not here.</p></div>
+  <div class="card"><h3>Nothing uploads</h3><p>The decoder runs in your browser against local bytes. Your payloads never leave your machine.</p></div>
+</div>
+<section class="sec">
+  <h2>What it reads</h2>
+  <ul>
+    <li>Unsigned and negative integers up to 64 bits, exact via BigInt (no float rounding above 2^53)</li>
+    <li>Definite and indefinite byte/text strings, with chunk counts and UTF-8 validation</li>
+    <li>Arrays and maps, nested, with duplicate-key detection and canonical key-order checking (length-first, then bytewise)</li>
+    <li>Semantic tags - datetimes, epochs, bignums - shown with their inner value</li>
+    <li>Simple values and all three float widths, including manual float16 decoding</li>
+    <li>Truncation and malformed-input errors instead of silent mis-decodes</li>
+  </ul>
+</section>
+<section class="sec">
+  <h2>Checked by an independent decoder</h2>
+  <p>The shared engine (<code>engine.js</code>) runs in Node against a corpus decoded by a completely separate Python CBOR implementation (<code>tests/build_corpus.py</code>): two independent decoders must agree on every value, every item count, every depth, and every canonicality violation. 74 checks pass (<code>node tests/run_tests.js</code>).</p>
+</section>
+<footer>Built in the open by the app factory. <a href="https://github.com/iLanis-agent/cborlens">Source on GitHub</a> - <a href="app.html">open the app</a></footer>
+</div>
+</body>
+</html>

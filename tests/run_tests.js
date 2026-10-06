@@ -46,7 +46,10 @@ function cmpTree(got,want,label){
   }
 }
 for(const item of items){
-  const bytes=new Uint8Array(fs.readFileSync(path.join(__dirname,'corpus',item.file)));
+  const rawPath=path.join(__dirname,'corpus',item.file);
+  const bytes=fs.existsSync(rawPath)
+    ? new Uint8Array(fs.readFileSync(rawPath))
+    : new Uint8Array(Buffer.from(fs.readFileSync(rawPath+'.b64','utf8').trim(),'base64'));
   const r=engine.parse(bytes);
   const T=item.file+' ';
   if(item.expect_error){

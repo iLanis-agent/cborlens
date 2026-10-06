@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CborLens - CBOR binary inspector</title>
+<style>
+:root{--bg:#0b0e14;--panel:#121722;--line:#232c3d;--fg:#dbe4f0;--dim:#7d8ba1;--acc:#c084fc;--warn:#fbbf24;--err:#f87171;--ok:#4ade80;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;letter-spacing:.5px}
+header h1 span{color:var(--acc)}
+header .sub{color:var(--dim);font-size:13px}
+.wrap{padding:18px 22px;max-width:1080px;margin:0 auto}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+button,.filebtn{background:var(--panel);border:1px solid var(--line);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+button:hover,.filebtn:hover{border-color:var(--acc);color:var(--acc)}
+button.active{border-color:var(--acc);color:var(--acc);background:#221033}
+input[type=file]{display:none}
+.summary{display:flex;gap:16px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--dim)}
+.summary b{color:var(--fg);font-weight:600}
+.notice{border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;display:none}
+.notice.warn{display:block;background:#2a2110;border:1px solid #6b5313;color:var(--warn)}
+.notice.err{display:block;background:#2a1010;border:1px solid #6b1313;color:var(--err)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+table{border-collapse:collapse;font-size:13px}
+th,td{padding:4px 10px 4px 0;text-align:left;vertical-align:top}
+td:first-child{color:var(--dim)}
+.empty{color:var(--dim);padding:30px 0;text-align:center}
+.badge{display:inline-block;padding:1px 8px;border-radius:6px;font-size:12px;font-weight:600}
+.badge.ok{background:#0f2413;color:var(--ok)}
+.badge.bad{background:#2a1010;color:var(--err)}
+.badge.warn{background:#2a2110;color:var(--warn)}
+.tree{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.7}
+.tree .ind{color:var(--line)}
+.k{color:var(--dim)}
+.t-uint,.t-nint{color:#93c5fd}
+.t-text{color:#7ee081}
+.t-bytes{color:#fca5a5}
+.t-tag{color:var(--acc)}
+.t-simple{color:#fbbf24}
+.t-float16,.t-float32,.t-float64{color:#5eead4}
+.meta{color:var(--dim);font-size:11px;margin-left:8px}
+footer{margin:26px 0 10px;text-align:center;color:var(--dim);font-size:12px}
+footer a{color:var(--acc);text-decoration:none}
+.hex{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--dim);word-break:break-all;line-height:1.8}
+</style>
+</head>
+<body>
+<header>
+  <h1>Cbor<span>Lens</span></h1>
+  <div class="sub">decode any CBOR blob - and find out if it's canonical enough to hash or sign</div>
+</header>
+<div class="wrap">
+  <div class="controls">
+    <label class="filebtn">Open .cbor<input id="file" type="file" accept=".cbor,application/cbor"></label>
+    <span style="color:var(--dim);font-size:12px">presets:</span>
+    <button data-preset="small">canonical map</button>
+    <button data-preset="floats">floats (16/32/64)</button>
+    <button data-preset="noncanon">non-canonical</button>
+    <button data-preset="tagged">tags + bignum</button>
+    <button data-preset="dupkeys">duplicate keys</button>
+    <button data-preset="trunc">truncated</button>
+  </div>
+  <div id="err" class="notice err"></div>
+  <div id="warn" class="notice warn"></div>
+  <div id="summary" class="summary" style="display:none"></div>
+  <div id="main" style="display:none">
+    <div class="card"><h3>Decoded tree</h3><div id="tree" class="tree"></div></div>
+    <div class="card"><h3>Raw bytes</h3><div id="hex" class="hex"></div></div>
+  </div>
+  <div id="empty" class="empty">Open a .cbor file or pick a preset. Everything runs locally - the file never leaves your machine.</div>
+  <footer>CborLens - cross-checked against an independent Python decoder (74 checks). <a href="index.html">about</a></footer>
+</div>
+<script src="engine.js"></script>
+<script>
+'use strict';
+var PRESETS={"small": "owFjb25lAoMBAgMDogT1BfY=", "floats": "hfk+APo9zMzN+0AJIftURC0Y+v+AAAD5fgA=", "noncanon": "GBeCYWJhYaJhegFhYQJ/Y2Zvb2NiYXL/", "tagged": "hMB0MjAyNi0xMC0wNlQyMDowMDowMFrBGmjlcUDCSQAAAAAAAAAAARv//////////w==", "dupkeys": "omF4AWF4Ag==", "trunc": "hMB0MjAyNi0xMC0wNlQyMDowMDowMFrB"};
+function b64ToBytes(s){var bin=atob(s),b=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return b;}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function nodeHtml(n,depth){
+  var pad='<span class="ind">'+'&nbsp;&nbsp;'.repeat(depth)+'</span>';
+  function val(){
+    switch(n.type){
+      case 'uint': case 'nint': return esc(String(n.value));
+      case 'text': return '"'+esc(n.value)+'"';
+      case 'bytes': return 'h\''+esc(n.preview)+(n.length>8?'...':'')+'\' <span class="meta">'+n.length+' bytes'+(n.chunks>1?', '+n.chunks+' chunks':'')+'</span>';
+      case 'simple': return esc(String(n.value));
+      case 'float16': case 'float32': case 'float64': return esc(String(n.value));
+      default: return '';
+    }
+  }
+  if(n.type==='array'||n.type==='map'){
+    var open=n.type==='array'?'[':'{',close=n.type==='array'?']':'}';
+    var h=pad+'<span class="t-'+n.type+'">'+open+'</span> <span class="meta">'+(n.type==='array'?n.length+' items':n.length+' pairs')+(n.indef?', indefinite':'')+'</span>\n';
+    if(n.type==='array')n.children.forEach(function(c){h+=nodeHtml(c,depth+1);});
+    else n.children.forEach(function(p,i){h+=pad+'&nbsp;&nbsp;<span class="k">key:</span> '+nodeHtml(p.key,0).trim()+'\n'+pad+'&nbsp;&nbsp;<span class="k">val:</span> '+nodeHtml(p.value,depth+2).trim()+'\n';});
+    h+=pad+'<span class="t-'+n.type+'">'+close+'</span>\n';
+    return h;
+  }
+  if(n.type==='tag')return pad+'<span class="t-tag">tag('+n.tag+')</span> '+nodeHtml(n.children[0],0).trim()+'\n';
+  return pad+'<span class="t-'+n.type+'">'+val()+'</span> <span class="meta">'+n.bytes+'B</span>\n';
+}
+function load(bytes,name){
+  var r=CborLens.parse(bytes);
+  var err=document.getElementById('err'),warn=document.getElementById('warn');
+  err.style.display='none';warn.style.display='none';
+  if(r.errors.length){err.style.display='block';err.textContent=r.errors.join('; ');}
+  var msgs=r.warnings.slice();
+  if(r.violations.length)msgs.push('not canonical: '+r.violations.join('; '));
+  if(msgs.length){warn.style.display='block';warn.textContent=msgs.join(' | ');}
+  if(r.errors.length)return;
+  document.getElementById('empty').style.display='none';
+  document.getElementById('main').style.display='block';
+  var s=document.getElementById('summary');
+  s.style.display='flex';
+  var types=Object.keys(r.by_type).map(function(k){return k+' x'+r.by_type[k];}).join(', ');
+  s.innerHTML='<span>file <b>'+esc(name)+'</b></span>'+
+    '<span>size <b>'+bytes.length+' B</b></span>'+
+    '<span>top-level items <b>'+r.top.length+'</b></span>'+
+    '<span>total items <b>'+r.items+'</b></span>'+
+    '<span>max depth <b>'+r.max_depth+'</b></span>'+
+    '<span>canonical <b>'+(r.canonical?'<span class="badge ok">yes</span>':'<span class="badge bad">no</span>')+'</b></span>'+
+    '<span>types <b>'+esc(types)+'</b></span>';
+  document.getElementById('tree').innerHTML=r.top.map(function(n){return nodeHtml(n,0);}).join('');
+  var hex=[];for(var i=0;i<bytes.length;i++)hex.push(bytes[i].toString(16).padStart(2,'0'));
+  document.getElementById('hex').textContent=hex.join(' ');
+}
+document.getElementById('file').addEventListener('change',function(){
+  var f=this.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){load(new Uint8Array(rd.result),f.name);};
+  rd.readAsArrayBuffer(f);
+});
+var btns=document.querySelectorAll('button[data-preset]');
+for(var k=0;k<btns.length;k++){
+  btns[k].addEventListener('click',function(){
+    for(var m=0;m<btns.length;m++)btns[m].classList.remove('active');
+    this.classList.add('active');
+    var name=this.getAttribute('data-preset');
+    load(b64ToBytes(PRESETS[name]),name+'.cbor (preset)');
+  });
+}
+</script>
+</body>
+</html>

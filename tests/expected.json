@@ -1,0 +1,277 @@
+{
+ "items": [
+  {
+   "file": "small.cbor",
+   "oracle": {
+    "top": [
+     [
+      "map",
+      [
+       [
+        [
+         "uint",
+         1
+        ],
+        [
+         "text",
+         "one"
+        ]
+       ],
+       [
+        [
+         "uint",
+         2
+        ],
+        [
+         "array",
+         [
+          [
+           "uint",
+           1
+          ],
+          [
+           "uint",
+           2
+          ],
+          [
+           "uint",
+           3
+          ]
+         ]
+        ]
+       ],
+       [
+        [
+         "uint",
+         3
+        ],
+        [
+         "map",
+         [
+          [
+           [
+            "uint",
+            4
+           ],
+           [
+            "simple",
+            true
+           ]
+          ],
+          [
+           [
+            "uint",
+            5
+           ],
+           [
+            "simple",
+            null
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "error": null,
+    "warnings": [],
+    "violations": [],
+    "canonical": true,
+    "items": 14,
+    "max_depth": 3
+   }
+  },
+  {
+   "file": "floats.cbor",
+   "oracle": {
+    "top": [
+     [
+      "array",
+      [
+       [
+        "float16",
+        1.5
+       ],
+       [
+        "float32",
+        0.10000000149011612
+       ],
+       [
+        "float64",
+        3.141592653589793
+       ],
+       [
+        "float32",
+        "-Infinity"
+       ],
+       [
+        "float16",
+        "NaN"
+       ]
+      ]
+     ]
+    ],
+    "error": null,
+    "warnings": [],
+    "violations": [],
+    "canonical": true,
+    "items": 6,
+    "max_depth": 2
+   }
+  },
+  {
+   "file": "noncanon.cbor",
+   "oracle": {
+    "top": [
+     [
+      "uint",
+      23
+     ],
+     [
+      "array",
+      [
+       [
+        "text",
+        "b"
+       ],
+       [
+        "text",
+        "a"
+       ]
+      ]
+     ],
+     [
+      "map",
+      [
+       [
+        [
+         "text",
+         "z"
+        ],
+        [
+         "uint",
+         1
+        ]
+       ],
+       [
+        [
+         "text",
+         "a"
+        ],
+        [
+         "uint",
+         2
+        ]
+       ]
+      ]
+     ],
+     [
+      "text",
+      "foobar"
+     ]
+    ],
+    "error": null,
+    "warnings": [],
+    "violations": [
+     "non-shortest integer encoding",
+     "map keys not in canonical order",
+     "indefinite-length string (not canonical)"
+    ],
+    "canonical": false,
+    "items": 10,
+    "max_depth": 2
+   }
+  },
+  {
+   "file": "tagged.cbor",
+   "oracle": {
+    "top": [
+     [
+      "array",
+      [
+       [
+        "tag",
+        0,
+        [
+         "text",
+         "2026-10-06T20:00:00Z"
+        ]
+       ],
+       [
+        "tag",
+        1,
+        [
+         "uint",
+         1759867200
+        ]
+       ],
+       [
+        "tag",
+        2,
+        [
+         "bytes",
+         "000000000000000001"
+        ]
+       ],
+       [
+        "uint",
+        "18446744073709551615"
+       ]
+      ]
+     ]
+    ],
+    "error": null,
+    "warnings": [],
+    "violations": [],
+    "canonical": true,
+    "items": 8,
+    "max_depth": 3
+   }
+  },
+  {
+   "file": "dupkeys.cbor",
+   "oracle": {
+    "top": [
+     [
+      "map",
+      [
+       [
+        [
+         "text",
+         "x"
+        ],
+        [
+         "uint",
+         1
+        ]
+       ],
+       [
+        [
+         "text",
+         "x"
+        ],
+        [
+         "uint",
+         2
+        ]
+       ]
+      ]
+     ]
+    ],
+    "error": null,
+    "warnings": [
+     "duplicate map key"
+    ],
+    "violations": [],
+    "canonical": true,
+    "items": 5,
+    "max_depth": 2
+   }
+  },
+  {
+   "file": "trunc.cbor",
+   "expect_error": "truncated"
+  }
+ ]
+}
